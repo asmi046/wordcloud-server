@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результаты опроса</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+<body>
+  <div class="container">
+    <h1>🎬 Результаты опроса</h1>
+    <canvas id="wordcloud"></canvas>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="number" id="totalVotes">0</div>
+        <div class="label">Всего ответов</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="uniqueMovies">0</div>
+        <div class="label">Уникальных фильмов</div>
+      </div>
+    </div>
+    <button id="resetBtn">🔄 Начать новый опрос</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+  <script>
+    const API_URL = window.location.origin.startsWith('http')
+      ? `${window.location.origin}/api`
+      : 'http://localhost:3000/api';
+    const canvas = document.getElementById('wordcloud');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function prepareCanvas(el) {
+      const ratio = window.devicePixelRatio || 1;
+      const cssWidth = Math.max(el.clientWidth, 320);
+      const cssHeight = Math.max(el.clientHeight, 300);
+
+      el.width = Math.floor(cssWidth * ratio);
+      el.height = Math.floor(cssHeight * ratio);
+
+      const ctx = el.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+    }
+
+    async function loadResults() {
+      try {
+        const response = await fetch(`${API_URL}/stats`);
+        const data = await response.json();
+
+        document.getElementById('totalVotes').textContent = data.total;
+        document.getElementById('uniqueMovies').textContent = data.unique;
+
+        if (!Array.isArray(data.wordList)) {
+          throw new Error('Некорректный формат данных: wordList отсутствует или не является массивом');
+        }
+
+        if (typeof WordCloud !== 'function') {
+          throw new Error('Библиотека WordCloud не загрузилась');
+        }
+
+        if (data.wordList.length > 0) {
+          prepareCanvas(canvas);
+          WordCloud(canvas, {
+            list: data.wordList,
+            gridSize: 8,
+            weightFactor: 3,
+            fontFamily: 'Arial',
+            color: () => {
+              const colors = ['#667eea', '#764ba2', '#4c1d95'];
+              return colors[Math.floor(Math.random() * colors.length)];
+            },
+            backgroundColor: '#f8f9ff'
+          });
+        } else {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      } catch (error) {
+        console.error('Ошибка:', error);
+      }
+    }
+
+    resetBtn.addEventListener('click', async () => {
+      if (confirm('Удалить все данные?')) {
+        await fetch(`${API_URL}/movies`, { method: 'DELETE' });
+        window.location.href = 'index.html';
+      }
+    });
+
+    loadResults();
+  </script>
+</body>
+</html>
