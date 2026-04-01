@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ-панель | Опросник с облаком тегов</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>🔐 Административная панель</h1>
+    <p>Управление опросом</p>
+    <div class="logo">Министерство цифрового развития</div>
+    <div class="nav-links">
+      <a href="/">📋 Опрос</a>
+      <a href="/cloud">☁️ Облако тегов</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="totalAnswers">0</div>
+        <div class="stat-label">Всего ответов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="uniqueAnswers">0</div>
+        <div class="stat-label">Уникальных ответов</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Настройка опроса</h2>
+      <form id="questionForm">
+        <div class="form-group">
+          <label for="question">Вопрос опроса:</label>
+          <textarea 
+            id="question" 
+            placeholder="Введите вопрос для опроса..."
+            required
+          ></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          💾 Сохранить вопрос
+        </button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Управление данными</h2>
+      <p style="color: var(--text-light); margin-bottom: 20px;">
+        Сброс данных удалит все ответы участников. Вопрос останется без изменений.
+      </p>
+      <button id="resetBtn" class="btn btn-danger btn-block">
+        🗑️ Сбросить все ответы
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>Текущие ответы</h2>
+      <div id="answersList"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

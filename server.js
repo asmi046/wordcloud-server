@@ -1,102 +1,92 @@
 const express = require('express');
-const fs = require('fs');
+const http = require('http');
+const socketIo = require('socket.io');
 const path = require('path');
-const cors = require('cors');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
 const PORT = 3000;
 
-app.use(express.json());
-app.use(cors());
+// Хранилище данных
+let surveyData = {
+  question: 'Какой фильм тебе нравится больше всего?',
+  answers: {} // { "матрица": 5, "аватар": 3 }
+};
+
+// Middleware
 app.use(express.static('public'));
+app.use(express.json());
 
-const DB_FILE = './database/db.json';
-
-// Инициализация БД
-if (!fs.existsSync('./database')) {
-  fs.mkdirSync('./database');
-}
-
-if (!fs.existsSync(DB_FILE)) {
-  fs.writeFileSync(DB_FILE, JSON.stringify({ movies: [] }));
-}
-
-// Чтение данных
-function readDB() {
-  const data = fs.readFileSync(DB_FILE, 'utf8');
-  return JSON.parse(data);
-}
-
-// Запись данных
-function writeDB(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
-
-// API: Получить все ответы
-app.get('/api/movies', (req, res) => {
-  const db = readDB();
-  res.json(db.movies);
+// Маршруты для страниц
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'survey.html'));
 });
 
-// API: Добавить ответ
-app.post('/api/movies', (req, res) => {
-  const { title } = req.body;
-  
-  if (!title || title.trim().length === 0) {
-    return res.status(400).json({ error: 'Название фильма не может быть пустым' });
-  }
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'admin.html'));
+});
 
-  const db = readDB();
-  
-  // Проверка лимита (10 ответов)
-  if (db.movies.length >= 10) {
-    return res.status(403).json({ error: 'Опрос завершён' });
-  }
+app.get('/cloud', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'cloud.html'));
+});
 
-  const newMovie = {
-    id: Date.now(),
-    title: title.trim(),
-    timestamp: new Date().toISOString()
-  };
+// API endpoints
+app.get('/api/survey', (req, res) => {
+  res.json(surveyData);
+});
 
-  db.movies.push(newMovie);
-  writeDB(db);
+app.post('/api/survey/question', (req, res) => {
+  surveyData.question = req.body.question;
+  io.emit('questionUpdated', surveyData.question);
+  res.json({ success: true });
+});
 
-  res.status(201).json({
-    success: true,
-    movie: newMovie,
-    count: db.movies.length
+app.post('/api/survey/reset', (req, res) => {
+  surveyData.answers = {};
+  io.emit('surveyReset', surveyData);
+  res.json({ success: true });
+});
+
+// Socket.IO для реального времени
+io.on('connection', (socket) => {
+  console.log('Новое подключение:', socket.id);
+
+  // Отправка текущих данных новому клиенту
+  socket.emit('initialData', surveyData);
+
+  // Обработка нового ответа
+  socket.on('submitAnswer', (answer) => {
+    const normalizedAnswer = answer.trim().toLowerCase();
+
+    if (normalizedAnswer) {
+      if (surveyData.answers[normalizedAnswer]) {
+        surveyData.answers[normalizedAnswer]++;
+      } else {
+        surveyData.answers[normalizedAnswer] = 1;
+      }
+
+      // Отправка обновленных данных всем клиентам
+      io.emit('answersUpdated', surveyData.answers);
+      console.log('Новый ответ:', normalizedAnswer, 'Всего:', surveyData.answers[normalizedAnswer]);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Отключение:', socket.id);
   });
 });
 
-// API: Сбросить опрос
-app.delete('/api/movies', (req, res) => {
-  writeDB({ movies: [] });
-  res.json({ success: true, message: 'Опрос сброшен' });
-});
-
-// API: Статистика
-app.get('/api/stats', (req, res) => {
-  const db = readDB();
-  const movies = db.movies.map(m => m.title);
-  const counts = {};
-
-  movies.forEach(movie => {
-    const normalized = movie.toLowerCase();
-    counts[normalized] = (counts[normalized] || 0) + 1;
-  });
-
-  const topMovie = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])[0];
-
-  res.json({
-    total: movies.length,
-    unique: Object.keys(counts).length,
-    topMovie: topMovie ? { title: topMovie[0], count: topMovie[1] } : null,
-    wordList: Object.entries(counts).map(([title, count]) => [title, count * 20])
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Сервер запущен на http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`
+╔═══════════════════════════════════════════════════════╗
+║   Сервер запущен на http://localhost:${PORT}           ║
+║                                                       ║
+║   Страницы:                                          ║
+║   • Опрос: http://localhost:${PORT}/                  ║
+║   • Админ: http://localhost:${PORT}/admin             ║
+║   • Облако: http://localhost:${PORT}/cloud            ║
+╚═══════════════════════════════════════════════════════╝
+  `);
 });

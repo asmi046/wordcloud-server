@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Опрос | Облако тегов</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Интерактивный опрос</h1>
+    <p>Поделитесь своим мнением</p>
+    <div class="logo">Министерство цифрового развития</div>
+    <div class="nav-links">
+      <a href="/cloud">☁️ Посмотреть облако тегов</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="question" id="questionText">
+        Загрузка вопроса...
+      </div>
+
+      <form id="answerForm">
+        <div class="form-group">
+          <label for="answer">Ваш ответ:</label>
+          <input 
+            type="text" 
+            id="answer" 
+            placeholder="Введите ваш ответ..."
+            required
+            autocomplete="off"
+          >
+        </div>
+        <button type="submit" class="btn btn-success btn-block">
+          ✉️ Отправить ответ
+        </button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom: 15px;">ℹ️ Информация</h3>
+      <p style="color: var(--text-light);">
+        Ваш ответ будет добавлен в общее облако тегов в режиме реального времени. 
+        Чем больше людей ответят одинаково, тем крупнее будет отображаться тег.
+      </p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/survey.js"></script>
+</body>
+</html>
