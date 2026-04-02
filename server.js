@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const ExcelJS = require('exceljs');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,15 +11,71 @@ const io = socketIo(server);
 
 const PORT = 3000;
 
-// Хранилище данных с историей (УБИРАЕМ дефолтный вопрос)
+// Путь к файлу справочника
+const QUESTIONS_DB_PATH = path.join(__dirname, 'questions_db.json');
+
+// Хранилище данных с историей
 let surveyData = {
-  question: '', // Пустой вопрос по умолчанию
+  question: '',
   answers: {},
   history: []
 };
 
-// История вопросов (ПУСТАЯ по умолчанию)
+// История вопросов
 let questionHistory = [];
+
+// Справочник вопросов
+let questionsLibrary = [];
+
+// Загрузка справочника при запуске
+function loadQuestionsLibrary() {
+  try {
+    if (fs.existsSync(QUESTIONS_DB_PATH)) {
+      const data = fs.readFileSync(QUESTIONS_DB_PATH, 'utf8');
+      questionsLibrary = JSON.parse(data);
+      console.log(`✅ Загружено ${questionsLibrary.length} вопросов из справочника`);
+    } else {
+      // Создаем файл с примерами вопросов
+      questionsLibrary = [
+        {
+          id: 1,
+          text: 'Какой ваш любимый цвет?',
+          category: 'Общие',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          text: 'Какое ваше хобби?',
+          category: 'Общие',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 3,
+          text: 'Что вам больше всего понравилось на мероприятии?',
+          category: 'Обратная связь',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      saveQuestionsLibrary();
+    }
+  } catch (error) {
+    console.error('❌ Ошибка загрузки справочника:', error);
+    questionsLibrary = [];
+  }
+}
+
+// Сохранение справочника
+function saveQuestionsLibrary() {
+  try {
+    fs.writeFileSync(QUESTIONS_DB_PATH, JSON.stringify(questionsLibrary, null, 2), 'utf8');
+    console.log('💾 Справочник вопросов сохранен');
+  } catch (error) {
+    console.error('❌ Ошибка сохранения справочника:', error);
+  }
+}
+
+// Загружаем справочник при старте
+loadQuestionsLibrary();
 
 // Middleware
 app.use(express.static(path.join(__dirname, 'public')));
@@ -37,7 +94,7 @@ app.get('/cloud', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'cloud.html'));
 });
 
-// API endpoints
+// API endpoints для опросов
 app.get('/api/survey', (req, res) => {
   res.json(surveyData);
 });
@@ -86,6 +143,107 @@ app.post('/api/survey/reset', (req, res) => {
 
   io.emit('surveyReset', surveyData);
   res.json({ success: true });
+});
+
+// API endpoints для справочника вопросов
+app.get('/api/questions-library', (req, res) => {
+  res.json(questionsLibrary);
+});
+
+app.post('/api/questions-library', (req, res) => {
+  const { text, category } = req.body;
+
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ error: 'Текст вопроса не может быть пустым' });
+  }
+
+  const newQuestion = {
+    id: questionsLibrary.length > 0 ? Math.max(...questionsLibrary.map(q => q.id)) + 1 : 1,
+    text: text.trim(),
+    category: category || 'Без категории',
+    createdAt: new Date().toISOString(),
+    usageCount: 0
+  };
+
+  questionsLibrary.push(newQuestion);
+  saveQuestionsLibrary();
+
+  res.json({ success: true, question: newQuestion });
+});
+
+app.put('/api/questions-library/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { text, category } = req.body;
+
+  const question = questionsLibrary.find(q => q.id === id);
+
+  if (!question) {
+    return res.status(404).json({ error: 'Вопрос не найден' });
+  }
+
+  if (text) question.text = text.trim();
+  if (category) question.category = category;
+  question.updatedAt = new Date().toISOString();
+
+  saveQuestionsLibrary();
+
+  res.json({ success: true, question });
+});
+
+app.delete('/api/questions-library/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const index = questionsLibrary.findIndex(q => q.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Вопрос не найден' });
+  }
+
+  questionsLibrary.splice(index, 1);
+  saveQuestionsLibrary();
+
+  res.json({ success: true });
+});
+
+// Использовать вопрос из справочника
+app.post('/api/questions-library/:id/use', (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const question = questionsLibrary.find(q => q.id === id);
+
+  if (!question) {
+    return res.status(404).json({ error: 'Вопрос не найден' });
+  }
+
+  // Увеличиваем счетчик использования
+  question.usageCount = (question.usageCount || 0) + 1;
+  question.lastUsed = new Date().toISOString();
+  saveQuestionsLibrary();
+
+  // Активируем вопрос
+  if (surveyData.question !== question.text && Object.keys(surveyData.answers).length > 0) {
+    const currentQuestion = questionHistory.find(q => q.question === surveyData.question);
+    if (currentQuestion) {
+      currentQuestion.answers = [...surveyData.history];
+      currentQuestion.completedAt = new Date();
+    }
+  }
+
+  surveyData.question = question.text;
+  surveyData.answers = {};
+  surveyData.history = [];
+
+  questionHistory.push({
+    id: questionHistory.length + 1,
+    question: question.text,
+    createdAt: new Date(),
+    answers: []
+  });
+
+  io.emit('questionUpdated', surveyData.question);
+  io.emit('surveyReset', surveyData);
+
+  res.json({ success: true, question });
 });
 
 // Экспорт в Excel
@@ -369,6 +527,8 @@ server.listen(PORT, () => {
 ║   • Опрос: http://localhost:${PORT}/                  ║
 ║   • Админ: http://localhost:${PORT}/admin             ║
 ║   • Облако: http://localhost:${PORT}/cloud            ║
+║                                                       ║
+║   📚 Справочник: ${questionsLibrary.length} вопросов               ║
 ╚═══════════════════════════════════════════════════════╝
   `);
 });

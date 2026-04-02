@@ -10,6 +10,7 @@
   <div class="header">
     <h1>🔐 Административная панель</h1>
     <p>Управление опросом и экспорт данных</p>
+    <div class="logo">МАХ Messenger Survey</div>
     <div class="nav-links">
       <a href="/">📋 Опрос</a>
       <a href="/cloud">☁️ Облако тегов</a>
@@ -42,8 +43,55 @@
       </button>
     </div>
 
+    <!-- НОВЫЙ БЛОК: Справочник вопросов -->
     <div class="card">
-      <h2>⚙️ Настройка опроса</h2>
+      <h2>📚 Справочник вопросов</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">
+        Создавайте шаблоны вопросов для быстрого использования. Нажмите на вопрос, чтобы активировать его в опросе.
+      </p>
+
+      <!-- Форма добавления нового вопроса в справочник -->
+      <div class="library-add-form">
+        <form id="addToLibraryForm">
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label for="libraryQuestionText">Текст вопроса:</label>
+              <input 
+                type="text" 
+                id="libraryQuestionText" 
+                placeholder="Введите вопрос для справочника..."
+                required
+              >
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="libraryQuestionCategory">Категория:</label>
+              <input 
+                type="text" 
+                id="libraryQuestionCategory" 
+                placeholder="Например: Общие"
+                value="Общие"
+              >
+            </div>
+            <div class="form-group" style="flex: 0 0 auto; align-self: flex-end;">
+              <button type="submit" class="btn btn-primary">
+                ➕ Добавить
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Список вопросов из справочника -->
+      <div id="questionLibraryList" class="library-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">📚</div>
+          <div class="empty-state-text">Загрузка справочника...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Настройка опроса (ручной ввод)</h2>
       <form id="questionForm">
         <div class="form-group">
           <label for="question">Вопрос опроса:</label>
@@ -54,7 +102,7 @@
           ></textarea>
         </div>
         <button type="submit" class="btn btn-primary btn-block">
-          💾 Сохранить вопрос
+          💾 Сохранить и активировать вопрос
         </button>
       </form>
     </div>
