@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Админ-панель | Опросник с облаком тегов</title>
+  <title>Админ-панель | МАХ Survey</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="header">
     <h1>🔐 Административная панель</h1>
-    <p>Управление опросом</p>
-    <div class="logo">Министерство цифрового развития</div>
+    <p>Управление опросом и экспорт данных</p>
     <div class="nav-links">
       <a href="/">📋 Опрос</a>
       <a href="/cloud">☁️ Облако тегов</a>
@@ -27,10 +26,24 @@
         <div class="stat-value" id="uniqueAnswers">0</div>
         <div class="stat-label">Уникальных ответов</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalQuestions">0</div>
+        <div class="stat-label">Всего вопросов</div>
+      </div>
     </div>
 
     <div class="card">
-      <h2>Настройка опроса</h2>
+      <h2>📊 Экспорт данных</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">
+        Выгрузите все ответы пользователей в формате Excel. Файл будет содержать все вопросы и ответы с подробной статистикой.
+      </p>
+      <button id="exportBtn" class="btn btn-success btn-block">
+        📥 Скачать Excel отчет (.xlsx)
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Настройка опроса</h2>
       <form id="questionForm">
         <div class="form-group">
           <label for="question">Вопрос опроса:</label>
@@ -47,18 +60,23 @@
     </div>
 
     <div class="card">
-      <h2>Управление данными</h2>
-      <p style="color: var(--text-light); margin-bottom: 20px;">
-        Сброс данных удалит все ответы участников. Вопрос останется без изменений.
+      <h2>🗑️ Управление данными</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">
+        Сброс данных удалит все ответы участников текущего опроса. Вопрос останется без изменений. Данные будут сохранены в истории.
       </p>
       <button id="resetBtn" class="btn btn-danger btn-block">
-        🗑️ Сбросить все ответы
+        🗑️ Сбросить текущие ответы
       </button>
     </div>
 
     <div class="card">
-      <h2>Текущие ответы</h2>
+      <h2>📈 Текущие ответы</h2>
       <div id="answersList"></div>
+    </div>
+
+    <div class="card">
+      <h2>📚 История опросов</h2>
+      <div id="historyList"></div>
     </div>
   </div>
 
